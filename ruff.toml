@@ -1,0 +1,13 @@
+[lint]
+extend-select = ["I"]
+
+
+[lint.isort]
+section-order=[
+    "future",
+    "first-party",
+    "local-folder",
+    "third-party",
+    "standard-library",
+]
+lines-after-imports = 2
