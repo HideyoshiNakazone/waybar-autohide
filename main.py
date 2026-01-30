@@ -1,18 +1,10 @@
-#!/usr/bin/env -S uv run --script
-#
-# /// script
-# requires-python = ">=3.12"
-# dependencies = [
-#   "pydantic==2.12.5",
-# ]
-# ///
-
-from pydantic import BaseModel, ConfigDict
+#!/usr/bin/env python
 
 import json
 import os
 import subprocess
 import time
+from dataclasses import dataclass, fields
 from enum import StrEnum
 from typing import Callable, Iterator, List, Tuple
 
@@ -27,14 +19,34 @@ class WaybarState(StrEnum):
     HIDDEN = "0"
 
 
+class BaseModel:
+    @classmethod
+    def model_validate(cls, data: dict):
+        field_names = {(f.name, f.type) for f in fields(cls)}
+        filtered_data = {}
+
+        for field_name, field_type in field_names:
+            if field_name not in data:
+                continue
+
+            if isinstance(field_type, type) and issubclass(field_type, BaseModel):
+                filtered_data[field_name] = field_type.model_validate(data[field_name])
+            elif isinstance(field_type, type):
+                filtered_data[field_name] = field_type(data[field_name])
+            else:
+                filtered_data[field_name] = data[field_name]
+
+        return cls(**filtered_data)
+
+
+@dataclass
 class Workspace(BaseModel):
     id: int
     name: str
 
 
+@dataclass
 class HyprlandClient(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
     address: str
     mapped: bool
     hidden: bool
@@ -45,6 +57,24 @@ class HyprlandClient(BaseModel):
     workspace: Workspace
     monitor: int
     fullscreen: int
+
+
+def is_waybar_running() -> bool:
+    result = subprocess.run(
+        ["pgrep", "-x", WAYBAR_PROC],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return result.returncode == 0
+
+
+def is_hyprland_running() -> bool:
+    result = subprocess.run(
+        ["hyprctl", "version"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return result.returncode == 0
 
 
 def toggle_waybar_visibility():
@@ -126,7 +156,9 @@ def get_cursor_position() -> Tuple[int, int]:
     return int(pos_x.strip()), int(pos_y.strip())
 
 
-def cursor_aproaches_bar(monitors: list[int] | None, current_state: WaybarState) -> bool:
+def cursor_aproaches_bar(
+    monitors: list[int] | None, current_state: WaybarState
+) -> bool:
     x, y = get_cursor_position()
 
     cursor_monitor = get_monitor_from_position(x, y)
@@ -138,44 +170,51 @@ def cursor_aproaches_bar(monitors: list[int] | None, current_state: WaybarState)
     return y <= offset
 
 
-def handle():
+def get_next_state(
+    waybar_monitors: list[int], current_state: WaybarState
+) -> WaybarState:
+    cursor_aproaches = cursor_aproaches_bar(waybar_monitors, current_state)
+
+    if cursor_aproaches:
+        return WaybarState.VISIBLE
+
+    active_workspaces = get_current_workspace()
+    overlaps = window_overlaps_bar(active_workspaces, waybar_monitors)
+
+    if overlaps:
+        return WaybarState.HIDDEN
+
+    return WaybarState.VISIBLE
+
+
+def main():
     waybar_monitors = os.environ.get("WAYBAR_AUTOHIDE_MONITORS", None)
     if waybar_monitors is not None:
         waybar_monitors = waybar_monitors.split(",")
         waybar_monitors = [int(m.strip()) for m in waybar_monitors if m.strip()]
+    else:
+        waybar_monitors = []
 
-    state: WaybarState = WaybarState(
-        os.environ.get("WAYBAR_AUTOHIDE_STATE", "1")
-    )
+    state: WaybarState = WaybarState(os.environ.get("WAYBAR_AUTOHIDE_STATE", "1"))
 
     refresh_rate = float(os.environ.get("WAYBAR_AUTOHIDE_REFRESH_RATE", "0.5"))
 
+    if not is_waybar_running():
+        print("Waybar is not running. Exiting.")
+        return
+
+    if not is_hyprland_running():
+        print("Hyprland is not running. Exiting.")
+        return
+
     while True:
+        next_state = get_next_state(waybar_monitors, state)
+        if next_state != state:
+            toggle_waybar_visibility()
+            state = next_state
+
         time.sleep(refresh_rate)
-
-        cursor_aproaches = cursor_aproaches_bar(waybar_monitors, state)
-
-        if cursor_aproaches and state == WaybarState.VISIBLE:
-            continue
-
-        if cursor_aproaches and state == WaybarState.HIDDEN:
-            toggle_waybar_visibility()
-            state = WaybarState.VISIBLE
-            continue
-
-        active_workspaces = get_current_workspace()
-
-        overlaps = window_overlaps_bar(active_workspaces, waybar_monitors)
-
-        if overlaps and state == WaybarState.VISIBLE:
-            toggle_waybar_visibility()
-            state = WaybarState.HIDDEN
-            continue
-
-        if not overlaps and state == WaybarState.HIDDEN:
-            toggle_waybar_visibility()
-            state = WaybarState.VISIBLE
 
 
 if __name__ == "__main__":
-    handle()
+    main()

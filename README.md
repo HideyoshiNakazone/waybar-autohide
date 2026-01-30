@@ -12,7 +12,6 @@ A lightweight Python script that automatically hides and shows [Waybar](https://
 ## Requirements
 
 - Python >= 3.12
-- [uv](https://github.com/astral-sh/uv) (for running the script)
 - Hyprland window manager
 - Waybar
 

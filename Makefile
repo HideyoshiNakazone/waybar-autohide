@@ -6,19 +6,11 @@ SCRIPT_TARGET := waybar-autohide
 DEV_DEPENDENCIES := \
 	ruff
 
-RUNTIME_DEPENDENCIES := \
-	uv
-
 
 # Check if all required binaries are installed when the Makefile is loaded
 
 check_dev_dependencies:
 	$(foreach bin,$(DEV_DEPENDENCIES),\
-	  $(if $(shell command -v $(bin) 2> /dev/null),,$(error Please install `$(bin)`)))
-
-
-check_runtime_dependencies:
-	$(foreach bin,$(RUNTIME_DEPENDENCIES),\
 	  $(if $(shell command -v $(bin) 2> /dev/null),,$(error Please install `$(bin)`)))
 
 
@@ -37,9 +29,9 @@ format: check_dev_dependencies
 	@ruff format --config ruff.toml ${SCRIPT}
 
 
-install: check_runtime_dependencies
+install:
 	@echo "Installing ${SCRIPT} to ${INSTALL_PATH}" as ${SCRIPT_TARGET}
 	@install -m 755 ${SCRIPT} ${INSTALL_PATH}/${SCRIPT_TARGET}
 
 
-.PHONY: setup-dev lint format install check_dev_dependencies check_runtime_dependencies
+.PHONY: setup-dev lint format install check_dev_dependencies
