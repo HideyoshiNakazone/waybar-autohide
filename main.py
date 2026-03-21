@@ -8,7 +8,7 @@ from dataclasses import dataclass, fields
 from enum import StrEnum
 from typing import Callable, Iterator, List, Tuple
 
-
+BAR_POSITION = os.getenv("WAYBAR_AUTOHIDE_POSITION", "bottom")  # "top" or "bottom"
 BAR_HEIGHT = int(os.getenv("WAYBAR_AUTOHIDE_BAR_HEIGHT", "50"))
 SCREEN_HEIGHT = int(os.getenv("WAYBAR_AUTOHIDE_SCREEN_HEIGHT", "1080"))
 HEIGHT_THRESHOLD = int(os.getenv("WAYBAR_AUTOHIDE_HEIGHT_THRESHOLD", "20"))
@@ -140,7 +140,12 @@ def get_overlapping_clients(
         x, y = c.at
         w, h = c.size
 
-        return (y + h) > (SCREEN_HEIGHT - BAR_HEIGHT - HEIGHT_THRESHOLD)
+        if BAR_POSITION == "bottom":
+            return (y + h) > (SCREEN_HEIGHT - BAR_HEIGHT - HEIGHT_THRESHOLD)
+        else:
+            return y < (BAR_HEIGHT + HEIGHT_THRESHOLD) and (y + h) > 0
+
+        
 
     return get_clients(overlaps_bar)
 
@@ -168,7 +173,11 @@ def cursor_aproaches_bar(
 
     offset = BAR_HEIGHT if current_state == WaybarState.VISIBLE else 0
 
-    return y >= (SCREEN_HEIGHT - BAR_HEIGHT - offset)
+    if BAR_POSITION == "bottom":
+        return y >= (SCREEN_HEIGHT - BAR_HEIGHT - offset)
+    else:
+        return y <= offset
+
 
 
 def get_next_state(
