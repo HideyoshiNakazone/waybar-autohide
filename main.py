@@ -9,9 +9,9 @@ from enum import StrEnum
 from typing import Callable, Iterator, List, Tuple
 
 
-BAR_HEIGHT = int(os.getenv("WAYBAR_AUTOHIDE_BAR_HEIGHT", "41"))
+BAR_HEIGHT = int(os.getenv("WAYBAR_AUTOHIDE_BAR_HEIGHT", "50"))
 SCREEN_HEIGHT = int(os.getenv("WAYBAR_AUTOHIDE_SCREEN_HEIGHT", "1080"))
-HEIGHT_THRESHOLD = int(os.getenv("WAYBAR_AUTOHIDE_HEIGHT_THRESHOLD", "0"))
+HEIGHT_THRESHOLD = int(os.getenv("WAYBAR_AUTOHIDE_HEIGHT_THRESHOLD", "20"))
 WAYBAR_PROC = os.getenv("WAYBAR_AUTOHIDE_PROCNAME", "waybar")
 
 
