@@ -11,6 +11,7 @@ from typing import Callable, Iterator, List, Tuple
 
 BAR_HEIGHT = int(os.getenv("WAYBAR_AUTOHIDE_BAR_HEIGHT", "50"))
 HEIGHT_THRESHOLD = int(os.getenv("WAYBAR_AUTOHIDE_HEIGHT_THRESHOLD", "20"))
+HEIGHT_TOLERANCE = int(os.getenv("WAYBAR_AUTOHIDE_HEIGHT_TOLERANCE", "5"))
 WAYBAR_PROC = os.getenv("WAYBAR_AUTOHIDE_PROCNAME", "waybar")
 
 
@@ -97,10 +98,10 @@ def get_monitor_from_position(pos_x: int, pos_y: int) -> int | None:
         start_x, end_x = monitor["x"], monitor["x"] + monitor["width"]
         start_y, end_y = monitor["y"], monitor["y"] + monitor["height"]
 
-        if pos_x < start_x or pos_x > end_x:
+        if not (start_x <= pos_x <= end_x):
             continue
 
-        if pos_y < start_y or pos_y > end_y:
+        if not (start_y <= pos_y <= end_y):
             continue
 
         return int(monitor["id"])
@@ -153,7 +154,7 @@ def window_overlaps_bar(
 def get_cursor_position() -> Tuple[int, int]:
     output = subprocess.check_output(["hyprctl", "cursorpos"]).decode()
     pos_x, pos_y = output.strip().split(",")
-    return int(pos_x.strip()), int(pos_y.strip())
+    return abs(int(pos_x.strip())), abs(int(pos_y.strip()))
 
 
 def cursor_aproaches_bar(
@@ -165,7 +166,7 @@ def cursor_aproaches_bar(
     if cursor_monitor is None or cursor_monitor not in (monitors or [cursor_monitor]):
         return False
 
-    offset = BAR_HEIGHT if current_state == WaybarState.VISIBLE else 0
+    offset = BAR_HEIGHT if current_state == WaybarState.VISIBLE else HEIGHT_TOLERANCE
 
     return y <= offset
 
