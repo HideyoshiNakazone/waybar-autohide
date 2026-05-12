@@ -2,6 +2,12 @@
 
 A lightweight Python script that automatically hides and shows [Waybar](https://github.com/Alexays/Waybar) based on window overlap and cursor position in [Hyprland](https://hyprland.org/).
 
+
+> [!NOTE]
+> This project is open source mainly so others can learn from it, tweak it, and make their own versions.
+> Forks are very welcome, but I probably won't actively review PRs or maintain community changes — it's best treated as a small personal utility/template.
+
+
 ## Features
 
 - **Auto-hide on overlap**: Automatically hides Waybar when a window overlaps with the bar area
