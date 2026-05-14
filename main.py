@@ -8,8 +8,9 @@ from dataclasses import dataclass, fields
 from enum import StrEnum
 from typing import Callable, Iterator, List, Tuple
 
-
+BAR_POSITION = os.getenv("WAYBAR_AUTOHIDE_POSITION", "bottom")  # "top" or "bottom"
 BAR_HEIGHT = int(os.getenv("WAYBAR_AUTOHIDE_BAR_HEIGHT", "50"))
+SCREEN_HEIGHT = int(os.getenv("WAYBAR_AUTOHIDE_SCREEN_HEIGHT", "1080"))
 HEIGHT_THRESHOLD = int(os.getenv("WAYBAR_AUTOHIDE_HEIGHT_THRESHOLD", "20"))
 HEIGHT_TOLERANCE = int(os.getenv("WAYBAR_AUTOHIDE_HEIGHT_TOLERANCE", "5"))
 WAYBAR_PROC = os.getenv("WAYBAR_AUTOHIDE_PROCNAME", "waybar")
@@ -140,7 +141,12 @@ def get_overlapping_clients(
         x, y = c.at
         w, h = c.size
 
-        return y < (BAR_HEIGHT + HEIGHT_THRESHOLD) and (y + h) > 0
+        if BAR_POSITION == "bottom":
+            return (y + h) > (SCREEN_HEIGHT - BAR_HEIGHT - HEIGHT_THRESHOLD)
+        else:
+            return y < (BAR_HEIGHT + HEIGHT_THRESHOLD) and (y + h) > 0
+
+        
 
     return get_clients(overlaps_bar)
 
@@ -168,7 +174,11 @@ def cursor_aproaches_bar(
 
     offset = BAR_HEIGHT if current_state == WaybarState.VISIBLE else HEIGHT_TOLERANCE
 
-    return y <= offset
+    if BAR_POSITION == "bottom":
+        return y >= (SCREEN_HEIGHT - BAR_HEIGHT - offset)
+    else:
+        return y <= offset
+
 
 
 def get_next_state(
@@ -198,15 +208,21 @@ def main():
 
     state: WaybarState = WaybarState(os.environ.get("WAYBAR_AUTOHIDE_STATE", "1"))
 
-    refresh_rate = float(os.environ.get("WAYBAR_AUTOHIDE_REFRESH_RATE", "0.5"))
-
-    if not is_waybar_running():
-        print("Waybar is not running. Exiting.")
-        return
+    refresh_rate = float(os.environ.get("WAYBAR_AUTOHIDE_REFRESH_RATE", "0.1"))
 
     if not is_hyprland_running():
-        print("Hyprland is not running. Exiting.")
-        return
+        print("Waiting for hyprland to start...")
+        while not is_hyprland_running():
+            time.sleep(0.5)
+        print("hyprland detected")
+
+    if not is_waybar_running():
+        print("Waiting for waybar to start...")
+        while not is_waybar_running():
+            time.sleep(0.5)
+        print("Waybar detected. Starting now...")
+
+    
 
     while True:
         next_state = get_next_state(waybar_monitors, state)
